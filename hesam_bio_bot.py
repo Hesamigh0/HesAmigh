@@ -3,12 +3,12 @@
 بات معرفی و پشتیبانی شخصی حسام
 ----------------------------------
 نصب:
-    pip install pyTelegramBotAPI openai
+    pip install pyTelegramBotAPI google-genai
 
 اجرا:
     1) از @BotFather یک بات بساز و توکن بگیر -> BOT_TOKEN
-    2) (اختیاری ولی پیشنهادی) از platform.openai.com یک API key بگیر
-       تا بات با هوش مصنوعی واقعی جواب بده -> OPENAI_API_KEY
+    2) (اختیاری ولی پیشنهادی) از aistudio.google.com یک API key رایگان بگیر
+       تا بات با هوش مصنوعی واقعی جواب بده -> GEMINI_API_KEY
     3) python hesam_bio_bot.py
 
 میزبانی رایگان: Railway.app یا Render.com (از موبایل/آیپد هم قابل مدیریته)
@@ -19,7 +19,7 @@ import telebot
 
 # ============ تنظیمات ============
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "TOKEN-خودت-رو-اینجا-بذار")
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")  # اختیاری
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")  # اختیاری
 
 # نکته امنیتی: شماره تماس رو پیش‌فرض مخفی نگه داشتم.
 # چون بات عمومیه و هرکسی می‌تونه بهش پیام بده، بهتره فقط از طریق
@@ -30,7 +30,7 @@ BIO = {
     "نام": "حسام عمیق",
     "شهر": "بجنورد",
     "تحصیلات": "دانش‌آموز",
-    "هدف": "یادگیری برنامه‌نویسی و ساخت برندهای حرفه‌ای",
+    "هدف": "کارآفرین شدن، ساخت چند شرکت، و تسلط بر برنامه‌نویسی و هوش مصنوعی",
     "پروژه‌ها": [
         "برندینگ و مارکتینگ یک کلینیک دندانپزشکی (وبسایت و افتتاحیه)",
         "پروژه‌ای در حوزه سینما و تولید محتوا",
@@ -41,20 +41,42 @@ BIO = {
         "DaVinci Resolve", "Barista", "Content Creation", "Marketing",
         "Photography", "Cinematic Filming", "Python", "n8n", "AI",
     ],
+    "مسیر یادگیری": [
+        "Python", "Backend Development", "Frontend Development",
+        "AI Agents", "Automation", "Networking", "Linux", "Business Systems",
+    ],
+    "علایق": [
+        "هوش مصنوعی", "اتوماسیون", "استارتاپ", "برندینگ",
+        "قهوه و اسپرسو", "موکتل", "مدیریت کافه", "UI Design", "System Design",
+    ],
+    "ارزش‌ها": [
+        "هوش مصنوعی آینده‌ست",
+        "برنامه‌نویسی یکی از ارزشمندترین مهارت‌هاست",
+        "ساختن کسب‌وکار بهتر از کارمندی‌ست",
+        "سیستم‌سازی مهم‌تر از درآمد موقتیه",
+        "یادگیری مداوم ضروریه",
+    ],
     "تلگرام": "@HesamAmigh",
     "تلفن": "09045197418",
 }
 
 SYSTEM_CONTEXT = f"""
-تو دستیار شخصی {BIO['نام']} هستی. با لحن فارسی، صمیمی، خلاصه و دقیق جواب بده.
-این اطلاعات درباره اونه:
+تو دستیار شخصی {BIO['نام']} هستی و به سوالات آدم‌های غریبه که پیام میدن جواب میدی.
+این پس‌زمینه رو کامل بدون که جواب‌های بهتر و دقیق‌تری بدی، ولی همه‌ی جزئیات رو یکجا
+تو یک پیام ندون - فقط چیزی که مرتبط با سوال طرفه رو بگو، خلاصه و کاربردی.
+
 شهر: {BIO['شهر']}
 تحصیلات: {BIO['تحصیلات']}
 هدف: {BIO['هدف']}
 پروژه‌ها: {', '.join(BIO['پروژه‌ها'])}
-مهارت‌ها و علایق: {', '.join(BIO['مهارت‌ها'])}
+مهارت‌ها: {', '.join(BIO['مهارت‌ها'])}
+مسیر یادگیری فعلی: {', '.join(BIO['مسیر یادگیری'])}
+علایق: {', '.join(BIO['علایق'])}
+ارزش‌ها و نگرش: {', '.join(BIO['ارزش‌ها'])}
+
 برای تماس بگو پیام بده به {BIO['تلگرام']} در تلگرام.
 هیچ اطلاعات دیگه‌ای غیر از موارد بالا رو حدس نزن یا اضافه نکن.
+درباره جزئیات شخصی/خانوادگی که اینجا نیومده (مثل مسائل خانوادگی یا مالی) چیزی نگو.
 جواب‌ها کوتاه و کاربردی باشن (حداکثر ۴-۵ خط).
 """
 
@@ -108,21 +130,22 @@ def rule_based_answer(text):
 # ============ حالت هوش مصنوعی (اختیاری) ============
 
 def ai_answer(question):
-    """اگه OPENAI_API_KEY تنظیم شده باشه، از OpenAI برای جواب هوشمند استفاده می‌کنه."""
-    if not OPENAI_API_KEY:
+    """اگه GEMINI_API_KEY تنظیم شده باشه، از Google Gemini برای جواب هوشمند استفاده می‌کنه."""
+    if not GEMINI_API_KEY:
         return None
     try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            max_tokens=300,
-            messages=[
-                {"role": "system", "content": SYSTEM_CONTEXT},
-                {"role": "user", "content": question},
-            ],
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=GEMINI_API_KEY)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=question,
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_CONTEXT,
+                max_output_tokens=300,
+            ),
         )
-        return response.choices[0].message.content
+        return response.text
     except Exception as e:
         print(f"AI error: {e}")
         return None
